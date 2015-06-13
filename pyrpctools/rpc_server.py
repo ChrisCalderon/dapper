@@ -14,6 +14,11 @@ Content-Length: %(length)d\r
 def get_time():
     return strftime('%a, %d %b %Y %T GMT', gmtime()) 
 
-def json_rpc_handler(request):
-    pass
+class RPC_Server(object):
+    def __init__(self, addr_port):
+        self.addr_port = addr_port
+
+    def __handler(self, request):
+        method = request['method']
+        
 
