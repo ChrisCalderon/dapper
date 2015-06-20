@@ -106,8 +106,8 @@ def simple_server(ip, port, func):
     func. Func must return a string, which is then sent
     as a response to the connection.'''
     listener = socket.socket()
-    listener.listen(100)
     listener.bind((ip, port))
+    listener.listen(100)
     readmap = {listener.fileno():listener}
     
     try:

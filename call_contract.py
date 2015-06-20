@@ -1,13 +1,14 @@
 #!/usr/bin/python
 from colorama import init, Style, Fore; init()
 import warnings; warnings.simplefilter('ignore')
-from pyrpctools import RPC_Client, DB
+from pyrpctools import RPC_Client, get_db
 from pyepm.api import abi_data
 import json
 import time
 import sys
 import re
 
+DB = get_db()
 RPC = RPC_Client(default='GETH')
 COINBASE = RPC.eth_coinbase()['result']
 MAXTRIES = 10
@@ -61,7 +62,7 @@ def confirmed_send(**kwds):
 
 if __name__ == '__main__':
     contract_name = sys.argv[1]
-    contract_addr = json.loads(DB.Get(contract_name))['address']
+    contract_addr = json.loads(DB[contract_name])['address']
     args = get_args()
     sig = get_sig(args)
     funcname = sys.argv[2]
