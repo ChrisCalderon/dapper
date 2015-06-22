@@ -1,6 +1,6 @@
 '''Low level code for socket networking + HTTP'''
 from collections import namedtuple
-import socket
+from socket import socket, SOL_SOCKET, SO_REUSEADDR
 import select
 import sys
 
@@ -8,12 +8,18 @@ CHUNK = 4096
 CRLF = '\r\n'
 CRLF2 = 2*CRLF
 
+def safe_recv(conn, amount):
+    '''Calls recv on conn and causes assertion error if conn closed.'''
+    chunk = conn.recv(amount)
+    assert chunk
+    return chunk
+
 def recv_n(conn, n, data=''):
     '''Calls recv on conn until data is n bytes long.
     If data is given as an argument, then bytes are appended
     to it until data is n bytes long.'''
     while len(data) < n:
-        data += conn.recv(n - len(data))
+        data += safe_recv(conn, CHUNK)
     return data
 
 def recv_until(conn, sym, split=True, n=1):
@@ -21,7 +27,7 @@ def recv_until(conn, sym, split=True, n=1):
     the bytes. Returns a list of bytes before and after sym.'''
     data = ''
     while sym not in data:
-        data += conn.recv(CHUNK)
+        data += safe_recv(conn, CHUNK)
     if split:
         return data.split(sym, n)
     else:
@@ -105,28 +111,30 @@ def simple_server(ip, port, func):
     Requests are parsed into dictionaries and passed onto
     func. Func must return a string, which is then sent
     as a response to the connection.'''
-    listener = socket.socket()
+    listener = socket()
+    listener.setsockopt(SOL_SOCKET, SO_REUSEADDR, True)
     listener.bind((ip, port))
     listener.listen(100)
     readmap = {listener.fileno():listener}
     
     try:
         while True:
-            for read, _, _ in select.select(readmap.keys(), [], []):
-                for fd in read:
-                    if readmap[fd] == listener:
-                        conn, _ = listener.accept()
-                        readmap[conn.fileno()] = conn
+            read, _, _ = select.select(readmap.keys(), [], [])
+            for fd in read:
+                if readmap[fd] == listener:
+                    conn, _ = listener.accept()
+                    readmap[conn.fileno()] = conn
+                else:
+                    conn = readmap[fd]
+                    try:
+                        request = read_message(conn)
+                    except: #this should only happen when the connection is closed
+                        readmap.pop(fd)
+                        conn.close()
                     else:
-                        conn = readmap[fd]
-                        try:
-                            request = read_message(conn)
-                        except: #this should only happen when the connection is closed
-                            readmap.pop(fd)
-                            conn.close()
-                        else:
-                            conn.sendall(func(request))
+                        conn.sendall(func(request))
     except KeyboardInterrupt as exc:
-        print '\r'
+        sys.stdout.write('\r')
+        sys.stdout.flush()
         for sock in readmap.values():
             sock.close()

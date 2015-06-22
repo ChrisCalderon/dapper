@@ -2,6 +2,7 @@
 A JSON RPC server for simulating an ethereum node for tests.
 '''
 import json
+import traceback
 from types import *
 from time import strftime, gmtime, time
 from http import simple_server
@@ -69,12 +70,18 @@ def call(rpc_request):
         try:
             func = globals()[method]
         except:
+            json.dumps(rpc_request)
+            traceback.print_exc()
             return make_error(METHOD_NOT_FOUND)
         try:
             result = func(*rpc_request.get('params', []))
         except TypeError, ValueError:
+            json.dumps(rpc_request)
+            traceback.print_exc()
             return make_error(INVALID_PARAMS, rpc_request['id'])
         except:
+            json.dumps(rpc_request)
+            traceback.print_exc()
             return make_error(INTERNAL_ERROR, rpc_request['id']) 
         else:
             return make_result(result, rpc_request['id'])
@@ -106,13 +113,6 @@ def handler(http_request):
 
 def rpc_server(addr, port):
     simple_server(addr, port, handler)
-
-def mine_on_fail(thunk):
-    try:
-        return thunk()
-    except:
-        STATE.mine()
-    return thunk()
 
 def eth_coinbase():
     return '0x' + STATE.block.coinbase.encode('hex')
