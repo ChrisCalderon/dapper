@@ -14,6 +14,7 @@ Commands:
   run-tests        Runs tests for the project using a simulated network.
   get-sigs         Outputs addresses and signatures for contracts.
   new-dapp         Sets up a new dapp directory.
+  raw-rpc          CLI for using JSON RPC with your local ethereum node.
 
 Use 'dapper <command> help' to see more detailed help for each command.
 '''
@@ -36,6 +37,9 @@ def get_sigs():
     pass
 
 def new_dapp():
+    pass
+
+def raw_rpc(method, *args):
     pass
 
 def main():
