@@ -1,7 +1,6 @@
-#!/usr/bin/python2
 import warnings; warnings.simplefilter('ignore')
 import serpent
-from pyrpctools import RPC_Client, get_db
+from dapper import rpc_client, db
 from collections import defaultdict
 import os
 import sys
@@ -14,13 +13,19 @@ RPC = None
 COINBASE = None
 TRIES = 10
 BLOCKTIME = 12
-ROOT = os.path.dirname(os.path.realpath(__file__))
-SRCPATH = os.path.join(ROOT, 'src')
 GAS = hex(3*10**6)
 USE_EXTERNS = False
 INFO = {}
 
-os.chdir(ROOT)
+def move_to_project_root(path=None):
+    if path == None:
+        path = os.getcwd()
+    assert db.is_not_root(path), 'You aren\'t in a dapper project!'
+    if db.has_build_db(path):
+        os.chdir(path)
+        return
+    else:
+        move_to_project_root(os.path.dirname(path))
 
 def get_fullname(name):
     '''
