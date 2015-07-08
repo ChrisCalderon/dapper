@@ -1,36 +1,115 @@
 import warnings; warnings.simplefilter('ignore')
 import serpent
-from dapper import rpc_client, db
+from dapper.rpc_client import RPC_Client
+import dapper.utils as u
 from collections import defaultdict
 import os
 import sys
 import json
 import time
 
-DB = get_db()
+ROOT = u.find_root()
+SOURCE = os.path.join(ROOT, 'src')
+IMPORTS = True #import syntax is  better :^)
+VERBOSITY = 0
+BLOCKTIME = 12
 FROM_DB = False
 RPC = None
 COINBASE = None
 TRIES = 10
-BLOCKTIME = 12
 GAS = hex(3*10**6)
-USE_EXTERNS = False
 INFO = {}
 
-def move_to_project_root(path=None):
-    if path == None:
-        path = os.getcwd()
-    assert db.is_not_root(path), 'You aren\'t in a dapper project!'
-    if db.has_build_db(path):
-        os.chdir(path)
-        return
-    else:
-        move_to_project_root(os.path.dirname(path))
+def help():
+    print '''\
+Usage: dapper compile <command> [<option> ...]
 
+Commands:
+  help                           Shows this help message.
+  all [<option> ...]             Compiles every file in src.
+  <contract> [<option> ...]      Compiles the named contract.
+
+Options:
+  -b, --blocktime                The next argument is the blocktime to
+                                 use, in seconds. Can be a float.
+  -v, --verbosity                The next argument should be 1 to see
+                                 the RPC messages, or 2 to see the HTTP
+                                 as well as the RPC messages.
+  -e, --externs                  By default, code is preprocessed to transform
+                                 import syntax to native serpent externs.
+                                 For example:
+                                   import foo as FOO
+                                 This gets translated into:
+                                   extern foo.se:[bar:[int256]:int256]
+                                   FOO = 0xdeadbeef
+                                 This is much more convenient for new projects
+                                 using more than one file, but it makes it
+                                 harder to use with a large codebase that already
+                                 uses externs. This option disables the
+                                 preprocessing. Address variables need to have a
+                                 a space around the equal sign, and need to be
+                                 right beneath their corresponding extern line.
+  -s, --source                   The next argument is the root dir of the
+                                 code you wish to compile. It defaults
+                                 to `<root>/src`, where root is the top
+                                 directory of your project.
+'''
+################################################################################
+#        1         2         3         4         5         6         7         8
+def invalid_opts():
+    print 'Invalid options!'
+    help()
+    sys.exit(1)
+
+def read_options(opts):
+    '''Reads user options and set's globals.'''
+    global BLOCKTIME
+    global VERBOSITY
+    global IMPORTS
+    global SOURCE
+    
+    i = 0
+    while i < len(opts):
+        if opts[i] in ('-b', '--bloctime'):
+            if (i + 1) >= len(opts):
+                invalid_opts()
+            forbidden = map(float, (0, 'nan', '-inf', '+inf')) 
+            b = float(opts[i+1])
+            if b in forbidden:
+                print 'Blocktime can not be 0, NaN, -inf, or +inf!'
+                sys.exit(1)
+            else:
+                BLOCKTIME = b
+            i += 2
+        elif opts[i] in ('-v', '--verbosity'):
+            if (i + 1) >= len(opts):
+                invalid_opts()
+            legal = (1, 2)
+            v = int(opt[i+1])
+            if v not in legal:
+                print 'Verbosity must be 1 or 2!'
+                sys.exit(1)
+            else:
+                VERBOSITY = v
+            i += 2
+        elif opts[i] in ('-i','-e', '--imports', '--exports'):
+            if opts[i] in ('-i', '--imports'):
+                
+        elif opts(i) in ('-s', '--source'):
+            if (i + 1) >= len(opts):
+                invalid_opts()
+            s = os.path.abspath(opts[i+1])
+            if not(s.startswith(ROOT) and os.path.isdir(s)): 
+                print 'Source path not a directoy or not in the project!'
+                sys.exit(1)
+            else:
+                SOURCE = S
+        
 def get_fullname(name):
     '''
-    Takes a short name from an import statement and
-    returns a real path to that contract.
+    Generates the fullname (path to the contract file) from a
+    contract's short name (the file name minus extension, used
+    in the import line.)
     '''
     for directory, subdirs, files in os.walk(SRCPATH):
         for f in files:
@@ -39,9 +118,11 @@ def get_fullname(name):
     raise ValueError('No such name: '+name)
 
 def get_shortname(fullname):
+    '''Extracts a shortname from a contract's fullname (it's path.)'''
     return os.path.split(fullname)[-1][:-3]
 
 def wait(seconds):
+    '''A shitty display while you wait! :^)'''
     sys.stdout.write('Waiting %f seconds' % seconds)
     sys.stdout.flush()
     for i in range(10):
@@ -50,7 +131,7 @@ def wait(seconds):
         time.sleep(seconds/10.)
     print
 
-def broadcast_code(evm, address=None):
+def broadcast_code(evm, address):
     '''Sends compiled code to the network, and returns the address.'''
     while True:
         response = RPC.eth_sendTransaction(sender=COINBASE, data=evm, gas=GAS)
@@ -58,7 +139,8 @@ def broadcast_code(evm, address=None):
             address = response['result']
             break
         else:
-            assert 'error' in response and response['error']['code'] == -32603, 'Weird JSONRPC response: ' + str(response)
+            assert 'error' in response and response['error']['code'] == -32603, \
+                'Weird JSONRPC response: ' + str(response)
             if address is None:
                 wait(BLOCKTIME)
             else:
@@ -175,27 +257,8 @@ def optimize_deps(deps, contract_nodes, contract):
                 break
     return new_deps
 
-def main():
-    global BLOCKTIME
-    global USE_EXTERNS
-    global RPC
-    global COINBASE
-    global FROM_DB
-    start = 0
-    verbose = False
-    debug = False
-    for arg in sys.argv:
-        if arg.startswith('--BLOCKTIME='):
-            BLOCKTIME = float(arg.split('=')[1])
-        if arg.startswith('--contract='):
-            FROM_DB = True
-            start = arg.split('=')[1]
-        if arg == '--use-externs':
-            USE_EXTERNS = True
-        if arg == '--verbose':
-            verbose = True
-        if arg == '--debug':
-            debug = True
+def main(args):
+    read_options()
     deps, nodes = get_compile_order()
     if type(start) == str:
         deps = optimize_deps(deps, nodes, start)
@@ -214,7 +277,4 @@ def main():
             sys.stdout.write('.')
             sys.stdout.flush()
         print
-    return 0
 
-if __name__ == '__main__':
-    main()
