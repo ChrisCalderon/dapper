@@ -11,10 +11,6 @@ def get_db():
     root = find_root()
     return json.load(os.path.join(root, '.dapper', 'build.json'))
 
-def save_db(db, update=False):
+def save_db(db):
     root = find_root()
-    if update:
-        temp = get_db()
-        temp.update(db)
-        db = temp
     return json.dump(db, os.path.join(root, '.dapper', 'build.json'))
