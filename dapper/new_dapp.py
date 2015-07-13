@@ -16,12 +16,13 @@ def main(option):
     if option == 'help':
         return help()
     try:
-        u.find_project_root()
+        u.find_root()
     except AssertionError:
-        os.mkdir(name)
-        os.mkdir(os.path.join(name, '.dapper'))
-        json.dump({}, open(os.path.join(name, '.dapper', 'build.json'), 'w'))
-        open(os.path.join(name, '.dapper', 'README'), 'w').write('''\
+        os.mkdir(option)
+        os.mkdir(os.path.join(option, '.dapper'))
+        os.mkdir(os.path.join(option, 'src'))
+        json.dump({}, open(os.path.join(option, '.dapper', 'build.json'), 'w'))
+        open(os.path.join(option, '.dapper', 'README'), 'w').write('''\
 This folder is used to hold important files for dapper operation.
 DO NOT MODIY ANYTHING IN HERE!
 ''')
