@@ -47,8 +47,8 @@ Options:
 ################################################################################
 #        1         2         3         4         5         6         7         8
 
-ROOT = u.find_root()
-SOURCE = os.path.join(ROOT, 'src')
+ROOT = None
+SOURCE = None
 IMPORTS = True #import syntax is  better :^)
 VERBOSITY = 0
 BLOCKTIME = 12
@@ -68,7 +68,8 @@ def read_options(opts):
     global BLOCKTIME
     global VERBOSITY
     global IMPORTS
-    global SOURCE    
+    global SOURCE
+    SOURCE = os.path.join(u.find_root(), 'src')
     i = 0
     bad_floats = map(float, (0, 'nan', '-inf', '+inf'))
     verb_vals = 1, 2
@@ -151,7 +152,7 @@ def broadcast_code(evm):
     code = RPC.eth_getCode(address)['result']
     assert code[2:] in evm, "dat code is fucked!"
     return address
-        
+
 def get_compile_order():
     # topological sorting! :3
     nodes = {}
