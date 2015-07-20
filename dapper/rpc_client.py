@@ -59,11 +59,14 @@ class RPC_Client(object):
             self.info = DEFAULTS[default]
         elif address:
             self.info = address
-    
+
         self.conn = socket.create_connection(self.info)
         self.id = 1
         self.verbose = verbose
         self.debug = debug
+
+    def close(self):
+        self.conn.close()
 
     def _send_rpc(self, name, args, kwds):
         if 'sender' in kwds:

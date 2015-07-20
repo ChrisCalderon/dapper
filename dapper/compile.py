@@ -92,7 +92,7 @@ def read_options(opts):
             if (i + 1) >= len(opts):
                 invalid_opts()
             try:
-                v = int(opt[i+1])
+                v = int(opts[i+1])
             except ValueError as exc:
                 print "Error:", exc
                 sys.exit(1)
@@ -104,7 +104,7 @@ def read_options(opts):
             i += 2
         elif opts[i] in ('-e', '--exports'):
             IMPORTS = False
-        elif opts(i) in ('-s', '--source'):
+        elif opts[i] in ('-s', '--source'):
             if (i + 1) >= len(opts):
                 invalid_opts()
             s = os.path.abspath(opts[i+1])
@@ -113,6 +113,9 @@ def read_options(opts):
                 sys.exit(1)
             else:
                 SOURCE = s
+        else:
+            print 'Bad Options! <given {}>'.format(opts)
+            return help()
         
 def get_fullname(name):
     '''
@@ -120,7 +123,7 @@ def get_fullname(name):
     contract's short name (the file name minus extension, used
     in the import line.)
     '''
-    for directory, subdirs, files in os.walk(SRCPATH):
+    for directory, subdirs, files in os.walk(SOURCE):
         for f in files:
             if f[:-3] == name:
                 return os.path.join(directory, f)
@@ -138,17 +141,25 @@ def wait(seconds):
         sys.stdout.write('.')
         sys.stdout.flush()
         time.sleep(seconds/10.)
-        print
+    print
 
 def broadcast_code(evm):
     '''Sends compiled code to the network, and returns the address.'''
-    receipt_hash = RPC.eth_sendTransaction(
+    response = RPC.eth_sendTransaction(
         sender=COINBASE,
         data=evm,
-        gas=GAS)['result']
-    wait(BLOCKTIME)
-    receipt = RPC.eth_getTransactionReceipt(receipt_hash)
-    address = receipt['contractAddress']
+        gas=GAS)
+    if 'error' in response:
+        wait(BLOCKTIME)
+        return broadcast_code(evm)
+    receipt_hash = response['result']
+    while True:
+        receipt = RPC.eth_getTransactionReceipt(receipt_hash)
+        if receipt['result'] is None:
+            wait(BLOCKTIME)
+            continue
+        break
+    address = receipt['result']['contractAddress']
     code = RPC.eth_getCode(address)['result']
     assert code[2:] in evm, "dat code is fucked!"
     return address
@@ -228,6 +239,7 @@ def compile(fullname):
     new_address = broadcast_code(evm)
     short_name = os.path.split(fullname)[-1][:-3]
     new_sig = serpent.mk_signature(new_code).replace('main', short_name, 1)
+    new_sig = new_sig.replace(':,', ':_,')
     fullsig = json.loads(serpent.mk_full_signature(new_code))
     new_info = {'address':new_address, 'sig':new_sig, 'fullsig':fullsig}
     DB[short_name] = new_info
@@ -243,15 +255,23 @@ def optimize_deps(deps, contract_nodes, contract):
     return new_deps
 
 def main(args):
-    read_options()
+    global COINBASE
+    global RPC
+    global DB
+    if args[0] == 'help':
+        return help()
+    read_options(args[1:])
     deps, nodes = get_compile_order()
-    if type(start) == str:
-        deps = optimize_deps(deps, nodes, start)
-        start = 0
-    RPC = RPC_Client(default='GETH', verbose=verbose, debug=debug)
+    DB = {}
+    if args[0] != 'all':
+        DB = u.get_db()
+        deps = optimize_deps(deps, nodes, args[0])
+    RPC = RPC_Client(default='GETH',
+                     verbose=(VERBOSITY > 0),
+                     debug=(VERBOSITY > 1))
     COINBASE = RPC.eth_coinbase()['result']
-    for i in range(start, len(deps)):
-        fullname = get_fullname(deps[i])
+    for fullname in map(get_fullname, deps):
+        os.chdir(os.path.dirname(fullname))
         print "compiling", fullname
         compile(fullname)
-    u.save_db(db)
+    u.save_db(DB)

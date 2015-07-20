@@ -1,5 +1,7 @@
 import os
+import json
 import sha3
+from dapper.rpc_client import RPC_Client
 
 ################################################################################
 #        1         2         3         4         5         6         7         8
@@ -17,7 +19,7 @@ def get_db():
 
 def save_db(db):
     root = find_root()
-    return json.dump(db, os.path.join(root, '.dapper', 'build.json'))
+    json.dump(db, open(os.path.join(root, '.dapper', 'build.json'), 'w'))
 
 def abi_int(x):
     return hex(x)[2:].rstrip('L').rjust(64, '0')
@@ -61,8 +63,11 @@ def make_sig(args):
             raise ValueError('Bad argument type: {}; {}'.format(a, args))
     return ','.join(sig)
 
-def abi_data(funcname, args):
-    sig = make_sig(args)
-    prefix_data = '{funcname}({sig})'.format(**locals())
-    prefix = sha3.sha3_256(prefix_data).hexdigest()[:8]
+def abi_data(name, args):
+    '''
+    Name means the name of a function plus type info,
+    as in the contract's full signature. Returns data
+    suitable for sending in an RPC transaction.
+    '''
+    prefix = sha3.sha3_256(name).hexdigest()[:8]
     return '0x' + prefix + abi_encode(args)

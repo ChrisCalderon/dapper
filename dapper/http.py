@@ -18,7 +18,7 @@ def recv_n(conn, n, data=''):
     If data is given as an argument, then bytes are appended
     to it until data is n bytes long.'''
     while len(data) < n:
-        data += safe_recv(conn, CHUNK)
+        data += safe_recv(conn, n - len(data))
     return data
 
 def recv_until(conn, sym, split=True, n=1):

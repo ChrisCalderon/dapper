@@ -22,7 +22,7 @@ def main():
     else:
         command = command.replace('-', '_')
         submodule = getattr(dapper, command)
-        submodule.main(*sys.argv[2:])
+        submodule.main(sys.argv[2:])
         sys.exit(0)
 
 if __name__ == '__main__':
