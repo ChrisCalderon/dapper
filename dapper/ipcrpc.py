@@ -18,7 +18,7 @@ IPC_PATH = os.path.join(os.path.expanduser('~'),
                         'geth.ipc')
 RECV_CHUNK = 4096 # max number of bytes to read from connection at a time.
 
-class IPCRPC(RPCBase):
+class RPCClient(RPCBase):
     '''An RPC client class that uses go-ethereum's 'ipc' interface.'''
     def __init__(self, *, ipc_path=IPC_PATH, verbose=False):
         '''The ipc_path variable defaults to the standard ipc path
@@ -45,8 +45,8 @@ class IPCRPC(RPCBase):
             try:
                 chunk = self.connection.recv(RECV_CHUNK)
             except socket.timeout:
-                self.connection.settimeout(2*timeout+eps)
-                timeout += eps
+                timeout = 2*timeout + eps
+                self.connection.settimeout(timeout)
             else:
                 response.extend(chunk)
 
