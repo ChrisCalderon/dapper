@@ -5,6 +5,5 @@ setup(name='dapper',
       description="An Ethereum Dapp creation suite.",
       author="Chris Calderon",
       author_email="chris-da-dev@augur.net",
-      packages=["dapper"],
-      scripts=["scripts/dapper"]
+      packages=["dapper"]
 )
