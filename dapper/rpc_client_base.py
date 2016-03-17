@@ -11,12 +11,16 @@ import codecs
 __all__ = ['RPCBase']
 
 _hex = codecs.getencoder('hex')
+
+
 def hex(b):
     '''Encodes bytes as hex and returns a UTF8 string.'''
     return _hex(b)[0].decode('utf8')
 
+
 def pprint(json_obj):
     print(ujson.dumps(json_obj, indent=2, sort_keys=True))
+
 
 class RPCBase:
     '''A base class for socket based RPC Client implementations.
@@ -51,18 +55,22 @@ class RPCBase:
         self.verbose = verbose
         self.start_connection()
         
+
     def start_connection(self):
         '''Creates the socket connection needed for rpc.'''
         raise NotImplemented()
+
 
     def close_connection(self):
         '''Closes the rpc socket connection.'''
         self.connection.shutdown(socket.SHUT_RDWR)
         self.connection.close()
 
+
     def _send(self, json_bytes):
         '''Sends the json payload.'''
         raise NotImplemented()
+
 
     def __rpcify(self, command, params):
         '''Formats a pair of command name and params into jsonrpc.
@@ -74,6 +82,7 @@ class RPCBase:
         self.message_id += 1
         return result
 
+
     @staticmethod
     def is_valid_json(json_bytes):
         try:
@@ -82,6 +91,7 @@ class RPCBase:
             return False
         else:
             return True
+
 
     def __send_rpc(self, json_obj):
         if self.verbose:
@@ -97,10 +107,12 @@ class RPCBase:
             pprint(result)
         return result
         
+
     def send_rpc(self, command, *params):
         return self.__send_rpc(self.__rpcify(command, params))
 
-    def batch_rcp(self, commands):
+
+    def batch_rpc(self, commands):
         '''Sends several rpc commands at once.
         
         The commands argument should be a list of tuples like so:
@@ -110,12 +122,14 @@ class RPCBase:
             ...
         ]
         '''
-        return self.__send_rpc(list(map(self.__rpcify, commands)))
+        return self.__send_rpc(list(map(self.__rpcify, *zip(*commands))))
  
+
     def add_to_batch(self, command, *params):
         '''Adds a command/params pair to the current batch.
         See the dpcumentation for self.batch_rpc'''
         self.batch.append((command, params))
+
 
     def send_batch(self):
         '''Sends the current batch.
@@ -123,6 +137,7 @@ class RPCBase:
         self.batch_rpc(self.batch)
         self.batch = []
         
+
     def __getattr__(self, command):
         '''On-the-fly convenience functions for RPC.'''
         # easier interface for rpc

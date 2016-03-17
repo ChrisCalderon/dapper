@@ -8,7 +8,7 @@ def main():
     client.send_rpc('eth_getBlockByNumber', 815859, False)
     
     for i in range(10):
-        client.eth_getBlockByNumber(i, batch=True)
+        client.eth_getBlockByNumber(i, False, batch=True)
     client.send_batch()
 
 if __name__ == '__main__':

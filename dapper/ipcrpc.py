@@ -47,6 +47,9 @@ class RPCClient(RPCBase):
             except socket.timeout:
                 timeout = 2*timeout + eps
                 self.connection.settimeout(timeout)
+            except socket.error as exc:
+                if exc.errno != errno.EAGAIN:
+                    raise
             else:
                 response.extend(chunk)
 
