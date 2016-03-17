@@ -1,0 +1,4 @@
+[submodule "serpent"]
+	path = serpent
+	url = https://github.com/ethereum/serpent.git
+	branch = develop
