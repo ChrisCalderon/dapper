@@ -1,18 +1,28 @@
 from . import serpent
 from . import ipcrpc
 from . import httprpc
-from typing import Union
+from typing import Union, List, Tuple
 from enum import Enum
 
 Backend = Enum("Backend", "ipc http")
 AddressType = Union[ipcrpc.AddressType,
                     httprpc.AddressType,
                     None]
+PythonAbiAnalogs = Tuple[Union[int,str,bytes,List[int]], ...]
 
 
 class ContractError(Exception):
     pass
 
+def abi_to_python_types(types: str) -> PythonAbiAnalogs:
+    result = []
+    for abi_type in types.strip('()').split(','):
+        if 'int' in abi_type or 'fixed' in abi_type:
+            if '[' in abi_type:
+                result.append(List[int])
+            else:
+                result.append(int)
+        
 
 class Contract:
     def __init__(self,
@@ -46,4 +56,5 @@ class Contract:
     def _generate_funcs(self):
         for item in self.signature:
             if item["type"] == "function":
-                pass
+                paramlist_start = item["name"].find("(")
+                name = item["name"][:paramlist_start]
