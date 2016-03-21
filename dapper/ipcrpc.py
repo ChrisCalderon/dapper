@@ -4,14 +4,15 @@ import socket
 import os
 from .rpc_client_base import BaseRpcClient
 
-default_path = os.path.join(os.path.expanduser('~'), '.ethereum', 'geth.ipc')
+AddressType = str
+default_address = os.path.join(os.path.expanduser('~'),
+                               '.ethereum', 'geth.ipc')
 RECV_CHUNK = 4096 # max number of bytes to read from connection at a time.
-class IPCRPCError(Exception): pass
 
 
 class RpcClient(BaseRpcClient):
     """An RPC client class that uses go-ethereum's 'ipc' interface."""
-    def __init__(self, *, address: str=default_path, verbose: bool=False):
+    def __init__(self, *, address: str=default_address, verbose: bool=False):
         super().__init__(address, verbose)
 
     def start_connection(self):
