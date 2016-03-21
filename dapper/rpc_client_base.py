@@ -54,6 +54,15 @@ class BaseRpcClient:
 
         return ujson.decode(response)
 
+    @staticmethod
+    def is_valid_json(json: str) -> bool:
+        try:
+            ujson.decode(json)
+        except:
+            return False
+        else:
+            return True
+
     def send_rpc(self,
                  command: str,
                  *params: JsonParams,
