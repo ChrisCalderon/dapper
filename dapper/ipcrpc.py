@@ -19,7 +19,7 @@ class RpcClient(BaseRpcClient):
         """Creates the UDS socket and connects to the given ipc socket path."""
         self.connection = socket.socket(socket.AF_UNIX,
                                         socket.SOCK_STREAM)
-        self.connection.connect(self.ipc_path)
+        self.connection.connect(self.address)
         self.connection.settimeout(0)
 
     def close_connection(self):

@@ -1,7 +1,7 @@
 """Calls the C++ serpent binary."""
 from subprocess import CalledProcessError, check_output
 import ujson
-from typing import Union
+from .rpc_client_base import JsonBatch
 
 
 class SerpentError(Exception):
@@ -25,7 +25,7 @@ def compile(code: str) -> str:
     return call_serpent("compile", code, "compiler error")
 
 
-def mk_full_signature(code: str, as_dict: bool=False) -> Union[str,dict]:
+def mk_full_signature(code: str, as_dict: bool=False) -> JsonBatch:
     output = call_serpent("mk_full_signature", code, "contract signature error")
     if as_dict:
         return ujson.decode(output)
