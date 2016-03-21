@@ -21,7 +21,6 @@ class RpcClient(BaseRpcClient):
         self.connection = socket.socket(socket.AF_UNIX,
                                         socket.SOCK_STREAM)
         self.connection.connect(self.address)
-        self.connection.settimeout(0)
 
     def close_connection(self):
         """Closes the connection."""
@@ -31,20 +30,7 @@ class RpcClient(BaseRpcClient):
     def _send(self, json: bytes) -> bytes:
         """Sends the json through the UDS connection to geth."""
         self.connection.sendall(json)
-        response = bytearray()
-        timeout = 0
-        eps = 0.001
-        while not self.is_valid_json(response):
-            try:
-                chunk = self.connection.recv(RECV_CHUNK)
-            except socket.timeout:
-                timeout = 2*timeout + eps
-                self.connection.settimeout(timeout)
-            except socket.error as exc:
-                if exc.errno != errno.EAGAIN:
-                    raise
-            else:
-                response.extend(chunk)
-        self.connection.settimeout(0)
-
-        return bytes(response)
+        result = bytearray()
+        while not self.is_valid_json(result.decode("utf8")):
+            result.extend(self.connection.recv(RECV_CHUNK))
+        return bytes(result)
