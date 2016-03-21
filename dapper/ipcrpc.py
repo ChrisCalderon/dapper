@@ -2,6 +2,7 @@
 socket to communicate with the go-ethereum client."""
 import socket
 import os
+import errno
 from .rpc_client_base import BaseRpcClient
 
 AddressType = str
