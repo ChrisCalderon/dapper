@@ -70,7 +70,7 @@ class Contract:
                 err = "Got bad json for coinbase: {}"
                 raise ContractError(err.format(ujson.encode(coinbase_json)))
         else:
-
+            self.coinbase = address #TODO: add re check.
 
     def _setup_code(self, code: str):
         self.signature = serpent.mk_full_signature(code, True)

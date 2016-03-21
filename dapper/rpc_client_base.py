@@ -44,7 +44,7 @@ class BaseRpcClient:
 
     def __send(self, json_stuff: ValidJsonMessage) -> ValidJsonMessage:
         """Encodes json objects, sends them, and prints if verbose is True."""
-        json = usjon.encode(json_stuff)
+        json = ujson.encode(json_stuff)
         if self.verbose:
             print("Sending:", json)
 
