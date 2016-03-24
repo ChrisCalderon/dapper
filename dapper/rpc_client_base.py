@@ -90,7 +90,7 @@ class BaseRpcClient:
             return self.send_rpc(command, *params, batch=batch)
         func.__name__ = command
         func.__doc__ = '''\
-Convenience function for the {} rpc.
+Convenience function for the '{}' rpc.
     Setting `batch` to True adds to the current batch.'''.format(command)
         setattr(self, command, func)
         return func
