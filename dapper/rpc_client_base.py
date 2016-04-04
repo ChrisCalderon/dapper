@@ -5,15 +5,10 @@ import ujson
 from typing import Any, Union, List, Tuple, Dict, Optional, Callable
 
 _hex = codecs.getencoder("hex")
-JsonSafe = Union[int,
-                 str,
-                 List["JsonSafe"],
-                 Tuple["JsonSafe", ...],
-                 Dict[str, "JsonSafe"]]
-JsonParams = Tuple[JsonSafe, ...]
-JsonObject = Dict[str, JsonSafe]
-JsonBatch = Union[Tuple[JsonObject, ...], List[JsonObject]]
-ValidJsonMessage = Union[JsonObject, JsonBatch]
+JsonObject = Dict[str, Union[int, str, List['JsonObject'], 'JsonObject']]
+JsonParams = Tuple[JsonObject, int, str]
+JsonBatch = List[JsonObject]
+JsonMessage = Union[JsonObject, JsonBatch]
 
 
 def bytes_to_hex(b: bytes) -> str:
@@ -22,33 +17,23 @@ def bytes_to_hex(b: bytes) -> str:
 
 
 class BaseRpcClient:
-    def __init__(self, address: Any, verbose: bool):
-        self.address = address
+    def __init__(self, verbose: bool):
         self.verbose = verbose
         self.tag = "{}-{{}}".format(bytes_to_hex(os.urandom(8)))
         self.message_count = -1
         self.batch = []
-        self.start_connection()
-
-    def start_connection(self):
-        """Starts the connection to the json rpc server."""
-        raise NotImplemented()
-
-    def close_connection(self):
-        """Closes the connection to the json rpc server."""
-        raise NotImplemented()
 
     def _send(self, message: bytes) -> bytes:
         """Sends json rpc to the server."""
         raise NotImplemented()
 
-    def __send(self, json_stuff: ValidJsonMessage) -> ValidJsonMessage:
-        """Encodes json objects, sends them, and prints if verbose is True."""
-        json = ujson.encode(json_stuff)
+    def send_json_message(self, json: JsonMessage) -> JsonMessage:
+        """Sends a json message and returns the result."""
+        encoded_json = ujson.encode(json)
         if self.verbose:
-            print("Sending:", json)
+            print("Sending:", encoded_json)
 
-        response = self._send(json.encode("utf8")).decode("utf8")
+        response = self._send(encoded_json.encode("utf8")).decode("utf8")
         if self.verbose:
             print("Got:", response)
 
@@ -64,33 +49,34 @@ class BaseRpcClient:
             return True
 
     def send_rpc(self,
-                 command: str,
+                 method: str,
                  *params: JsonParams,
                  batch: bool=False) -> Optional[JsonObject]:
-        """Sends an rpc, or adds one to the current batch."""
+        """Creates a json message with the given method and params,
+        then sends it or adds it to the current batch."""
         self.message_count += 1
         json = {"jsonrpc": "2.0",
                 "id": self.tag.format(self.message_count),
-                "method": command,
+                "method": method,
                 "params": params}
 
         if batch:
             self.batch.append(json)
         else:
-            return self.__send(json)
+            return self.send_json_message(json)
 
     def send_batch(self) -> Optional[JsonBatch]:
         """Sends the current rpc batch."""
         if self.batch:
-            return self.__send(self.batch)
+            return self.send_json_message(self.batch)
 
-    def __getattr__(self, command: str) -> Callable[..., Optional[JsonObject]]:
+    def __getattr__(self, method: str) -> Callable[..., Optional[JsonObject]]:
         """Generates convenience functions for rpc."""
-        def func(*params: JsonSafe, batch: bool=False) -> Optional[JsonObject]:
-            return self.send_rpc(command, *params, batch=batch)
-        func.__name__ = command
+        def func(*params: JsonParams, batch: bool=False) -> Optional[JsonObject]:
+            return self.send_rpc(method, *params, batch=batch)
+        func.__name__ = method
         func.__doc__ = '''\
 Convenience function for the '{}' rpc.
-    Setting `batch` to True adds to the current batch.'''.format(command)
-        setattr(self, command, func)
+    Setting `batch` to True adds to the current batch.'''.format(method)
+        setattr(self, method, func)
         return func

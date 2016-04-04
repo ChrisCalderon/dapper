@@ -5,24 +5,21 @@ import os
 import errno
 from .rpc_client_base import BaseRpcClient
 
-AddressType = str
+IpcAddress = str
 default_address = os.path.join(os.path.expanduser('~'),
-                               '.ethereum', 'geth.ipc')
+                               '.ethereum', 'geth.ipc')  # default path for go-ethereum
 RECV_CHUNK = 4096 # max number of bytes to read from connection at a time.
 
 
 class RpcClient(BaseRpcClient):
     """An RPC client class that uses go-ethereum's 'ipc' interface."""
-    def __init__(self, *, address: str=default_address, verbose: bool=False):
-        super().__init__(address, verbose)
-
-    def start_connection(self):
-        """Creates the UDS socket and connects to the given ipc socket path."""
+    def __init__(self, *, address: IpcAddress=default_address, verbose: bool=False):
+        super().__init__(verbose)
         self.connection = socket.socket(socket.AF_UNIX,
                                         socket.SOCK_STREAM)
-        self.connection.connect(self.address)
+        self.connection.connect(address)
 
-    def close_connection(self):
+    def close(self):
         """Closes the connection."""
         self.connection.shutdown(socket.SHUT_RDWR)
         self.connection.close()

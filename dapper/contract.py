@@ -1,20 +1,22 @@
 from . import ipcrpc
 from . import httprpc
 from .rpc_client_base import JsonBatch
-from typing import Union, List, Tuple, Optional
+from typing import Union, List, Tuple, Optional, NamedTuple
 from enum import Enum
+from .abi_encode import get_python_type
+from sha3 import sha3_256 as keccak256  # pre-NIST sha3 standard
+from collections import defaultdict, namedtuple
 import math
-import sha3
 
 Backend = Enum("Backend", "ipc http")
-AddressType = Union[ipcrpc.AddressType,
-                    httprpc.AddressType,
+AddressType = Union[ipcrpc.IpcAddress,
+                    httprpc.HttpAddress,
                     None]
-PythonAbiAnalogs = Tuple[Union[int,str,bytes,List[int], Tuple[int, ...]], ...]
 
 
 class ContractError(Exception):
     pass
+
 
 class Contract:
     def __init__(self, *,
@@ -33,6 +35,8 @@ class Contract:
             sender_address = self.rpc.eth_coinbase().get("result", False)
             if sender_address:
                 self.sender_address = sender_address
+            else:
+                raise ContractError('Unable to detect default sender address')
         self.contract_address = contract_address
         self.signature = signature
 
@@ -50,12 +54,30 @@ class Contract:
             try:
                 self.rpc = RpcClient(verbose=verbose)
             except Exception:
-                raise ContractError("Couldn't connect to default for {}.".format(backend))
+                err = "Couldn't connect to default for {}."
+                raise ContractError(err.format(backend))
         else:
             try:
                 self.rpc = RpcClient(address=rpc_address, verbose=verbose)
             except Exception as exc:
-                err = "Error setting up RPCCLient; type={}; address={}; exc={}"
+                err = "Error setting up RpcClient; type={}; address={}; exc={}"
                 raise ContractError(err.format(backend, rpc_address, exc))
+
+    def _generate_contract_functions(self):
+        function_names = defaultdict(lambda: defaultdict(list))
+        function_info = namedtuple('function_info', 'prefix abi_types')
+        for item in self.signature:
+            if item['type'] == 'function':
+                name, types = item['name'].split('(')
+                abi_types = types.rstrip(')').split(',')
+                py_types = tuple(map(get_python_type, abi_types))
+                if item['name'] not in function_names:
+                    function_names[name] = {}
+                if py_types not in function_names[name]:
+                    function_names[name][py_types] = []
+                prefix = keccak256(item['name'].encode('utf8')).hexdigest()
+                function_names[name][py_types].append((prefix, abi_types))
+
+
 
 

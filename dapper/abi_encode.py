@@ -10,7 +10,8 @@ ABI_TYPE = re.compile(
 # type expected from match_object.groupdict()
 GroupDict = Dict[str,Optional[str]]
 # python types with ABI equivalents
-PythonAbiAnalog = Union[int,str,bytes,List[int],List[bytes]]
+AbiAnalog = Union[int, str, bytes, List[int], List[bytes]]
+
 
 def encode_int(x: int, signed: bool) -> str:
     """Encodes x as an ABI int-like value. Use for encoding 'int',
@@ -126,7 +127,7 @@ def get_python_type(abi_type: str) -> type:
         raise ValueError("Unexpected ABI type: {}".format(abi_type))
 
 
-def encode_args(args: Tuple[PythonAbiAnalog], abi_types: Tuple[str]) -> str:
+def encode_args(args: Tuple[AbiAnalog], abi_types: Tuple[str]) -> str:
     """Encodes a tuple of python objects with the corresponding ABI types."""
     static_vals = []
     dynamic_vals = []

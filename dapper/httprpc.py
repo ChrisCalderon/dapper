@@ -5,22 +5,18 @@ from typing import Tuple
 REQUEST_HEADERS = {'User-Agent': 'dapper/1.0',
                    'Content-Type': 'application/json',
                    'Accept': 'application/json'}
-default_address = ('localhost', 8545)
-AddressType = Tuple[str, int]
+default_address = ('localhost', 8545)  # the go-ethereum default address
+HttpAddress = Tuple[str, int]
 
 
 class RpcClient(BaseRpcClient):
     def __init__(self, *,
-                 address: AddressType=default_address,
+                 address: HttpAddress=default_address,
                  verbose: bool=False):
-        super().__init__(address, verbose)
+        super().__init__(verbose)
+        self.connection = http.client.HTTPConnection(*address)
 
-    def start_connection(self):
-        host = self.address[0]
-        port = self.address[1]
-        self.connection = http.client.HTTPConnection(host, port)
-
-    def close_connection(self):
+    def close(self):
         self.connection.close()
 
     def _send(self, json: bytes) -> bytes:
